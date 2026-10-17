@@ -22,7 +22,6 @@
     <!-- MODAL DE AUTENTICACION Y REGISTRO -->
     <div id="modalAuth" class="modal overlay-hidden" tabindex="-1">
         <div class="modal-content card">
-            <!-- Botón de Cierre "X" en Esquina Superior Derecha -->
             <button id="btnCloseAuthModal" type="button" class="btn-close-modal" onclick="cerrarModalAuth()" aria-label="Cerrar modal">&times;</button>
 
             <div class="auth-tabs">
@@ -44,13 +43,11 @@
                 
                 <button type="submit" class="btn-primary">Iniciar Sesión</button>
 
-                <!-- Enlaces Secundarios Armonizados -->
                 <div class="auth-secondary-links">
                     <a href="#" id="linkForgotPassword" onclick="mostrarOlvidastePassword(event)">¿Olvidaste tu contraseña?</a>
                     <a href="#" onclick="toggleAuthMode('register'); return false;">Crear perfil / Registrarse</a>
                 </div>
 
-                <!-- Botón Volver al Inicio Perfectamente Centrado -->
                 <div class="auth-center-action">
                     <button type="button" class="btn-secondary btn-return-home" onclick="cerrarModalAuth()">Volver al Inicio</button>
                 </div>
@@ -103,7 +100,6 @@
                     <input type="password" id="regConfirmPassword" class="form-control" placeholder="Repita su contraseña" required>
                 </div>
 
-                <!-- Selector de Avatar Compacto -->
                 <div class="form-group">
                     <label>Selecciona tu Avatar:</label>
                     <div class="avatar-options avatar-options-compact">
@@ -129,8 +125,10 @@
                 <div class="form-group">
                     <label for="txtWalletAuth">Wallet Web3 Individual</label>
                     <div class="wallet-input-group">
-                        <input type="text" id="txtWalletAuth" class="form-control" readonly placeholder="Billetera no detectada...">
-                        <button type="button" id="btnConnectWalletModal" class="btn-secondary">Conectar Billetera</button>
+                        <input type="text" id="txtWalletAuth" class="form-control" placeholder="0x... o presiona Conectar Billetera">
+                        <button type="button" id="btnConnectWalletModal" class="btn-secondary" onclick="conectarWalletModal(event)">
+                            🦊 Conectar Billetera
+                        </button>
                     </div>
                 </div>
 
@@ -173,8 +171,10 @@
                 <div class="form-group">
                     <label for="editWalletAddress">Dirección de Billetera Asignada</label>
                     <div class="wallet-input-group">
-                        <input type="text" id="editWalletAddress" class="form-control">
-                        <button type="button" id="btnUpdateWalletAddress" class="btn-secondary">Vincular Nueva</button>
+                        <input type="text" id="editWalletAddress" class="form-control" placeholder="0x... o presiona Vincular Nueva">
+                        <button type="button" id="btnUpdateWalletAddress" class="btn-secondary" onclick="conectarWalletEditPerfil(event)">
+                            🦊 Vincular Nueva
+                        </button>
                     </div>
                 </div>
 
@@ -186,7 +186,7 @@
         </div>
     </div>
 
-    <!-- BARRA SUPERIOR DE NAVEGACIÓN (TOOLBAR CENTRADA CON HOVER Y EVENTOS) -->
+    <!-- BARRA SUPERIOR DE NAVEGACIÓN -->
     <header class="navbar">
         <a href="#tabInicio" class="brand" id="logoBrand" onclick="activarPestana('tabInicio'); return false;">
             <span class="logo-text">MonadHub</span>
@@ -247,7 +247,6 @@
                 </div>
             </section>
 
-            <!-- Métricas Dinámicas -->
             <section class="metrics-grid">
                 <div class="metric-card card">
                     <span class="metric-label">Vacas Creadas</span>
@@ -367,7 +366,6 @@
                     <input type="number" id="numTotalOpciones" class="form-control" min="2" max="10" value="2">
                 </div>
 
-                <!-- Contenedor Dinámico para Opciones -->
                 <div id="dynamicOptionsContainer" class="dynamic-options-container"></div>
 
                 <div class="form-group">
@@ -504,7 +502,6 @@
                 </div>
             </section>
 
-            <!-- SECCIÓN ADMIN -->
             <section id="adminPanelSection" class="card hidden">
                 <div class="card-header">
                     <h2>Panel Privilegiado de Administración</h2>
@@ -569,7 +566,6 @@
         <p>MonadHub - Plataforma de Gobernanza Descentralizada | Monad Testnet (Chain ID 10143) | Supabase Cloud</p>
     </footer>
 
-    <!-- Script de lógica principal -->
     <script src="app.js"></script>
 </body>
 </html>

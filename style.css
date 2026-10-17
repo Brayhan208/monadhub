@@ -1,15 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-/* ==========================================================================
-   PALETA DE COLORES Y VARIABLES GLOBAL
-   ========================================================================== */
 :root {
     --bg-main: #050814;
     --bg-card: rgba(10, 15, 29, 0.85);
-    --primary: #00F2FE;        /* Cian Eléctrico */
+    --primary: #00F2FE;
     --primary-glow: rgba(0, 242, 254, 0.25);
-    --secondary: #FF3B60;      /* Coral Neón */
-    --accent: #10B981;         /* Verde Esmeralda */
+    --secondary: #FF3B60;
+    --accent: #10B981;
     --text-main: #FFFFFF;
     --text-sec: #94A3B8;
     --border: #1E293B;
@@ -42,9 +39,6 @@ body {
     min-height: 100vh;
 }
 
-/* ==========================================================================
-   BARRA DE NAVEGACIÓN (TOOLBAR - EFECTO HOVER Y ZOOM EXCLUSIVO)
-   ========================================================================== */
 .navbar {
     display: flex;
     justify-content: space-between;
@@ -58,7 +52,6 @@ body {
     z-index: 100;
 }
 
-/* Transiciones fluidas aplicadas EXCLUSIVAMENTE a la Toolbar */
 .navbar .brand,
 .navbar .logo-text,
 .navbar .tab-btn,
@@ -71,14 +64,8 @@ body {
                 border-color 0.2s ease-in-out;
 }
 
-/* Zoom y Resaltado exclusivo de la Toolbar */
-.navbar .brand:hover {
-    transform: scale(1.08);
-}
-
-.navbar .brand:hover .logo-text {
-    color: var(--primary);
-}
+.navbar .brand:hover { transform: scale(1.08); }
+.navbar .brand:hover .logo-text { color: var(--primary); }
 
 .navbar .tab-btn:hover {
     transform: scale(1.08);
@@ -256,9 +243,6 @@ body {
     border-radius: 2px;
 }
 
-/* ==========================================================================
-   LAYOUT PRINCIPAL Y CAJAS (ESTÁTICAS SIN ZOOM NI ESCALADO)
-   ========================================================================== */
 .main-container {
     max-width: 880px;
     margin: 2rem auto;
@@ -322,9 +306,6 @@ body {
     gap: 0.8rem;
 }
 
-/* ==========================================================================
-   FORMULARIOS Y MODALES (UI/UX)
-   ========================================================================== */
 .form-group { margin-bottom: 1.2rem; }
 .form-row { display: flex; gap: 1rem; }
 .form-row .form-group { flex: 1; }
@@ -356,7 +337,6 @@ body {
 
 .wallet-input-group { display: flex; gap: 0.5rem; }
 
-/* Enlaces Secundarios Armonizados */
 .auth-secondary-links {
     display: flex;
     justify-content: space-between;
@@ -370,11 +350,8 @@ body {
     transition: color 0.2s ease;
 }
 
-.auth-secondary-links a:hover {
-    color: #3B82F6;
-}
+.auth-secondary-links a:hover { color: #3B82F6; }
 
-/* Botón "Volver al Inicio" Centrado */
 .auth-center-action {
     display: flex;
     justify-content: center;
@@ -386,7 +363,6 @@ body {
     text-align: center;
 }
 
-/* Selector de Avatar Compacto */
 .avatar-options-compact {
     display: flex;
     gap: 0.8rem;
@@ -414,7 +390,6 @@ body {
     box-shadow: 0 0 10px var(--primary-glow);
 }
 
-/* Botón de Cierre "X" posicionado en la esquina superior derecha */
 .btn-close-modal {
     position: absolute;
     top: 16px;
@@ -441,7 +416,6 @@ body {
     color: var(--secondary);
 }
 
-/* Botones Principales */
 .btn-action, .btn-primary {
     width: 100%;
     padding: 0.9rem;
@@ -464,9 +438,6 @@ body {
     white-space: nowrap;
 }
 
-/* ==========================================================================
-   MÓDULO DE VOTACIONES, TEMPORIZADOR Y COMPARTIR
-   ========================================================================== */
 .search-box { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
 
 .timer-container {
@@ -511,9 +482,6 @@ body {
 .qr-label { font-size: 0.85rem; color: var(--text-sec); margin-bottom: 0.5rem; }
 #qrcode img, #qrcode canvas { margin: 0.5rem auto; border: 4px solid #FFF; border-radius: 6px; }
 
-/* ==========================================================================
-   PANEL DE ADMINISTRACIÓN (ADMIN)
-   ========================================================================== */
 .admin-tabs { display: flex; gap: 0.8rem; margin-bottom: 1.2rem; }
 
 .admin-table {
@@ -531,7 +499,6 @@ body {
 .admin-table th { color: var(--text-sec); text-transform: uppercase; font-size: 0.75rem; }
 .table-responsive { overflow-x: auto; }
 
-/* Modales */
 .modal {
     position: fixed;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -564,7 +531,6 @@ body {
 .info-item strong { color: var(--text-main); display: block; margin-bottom: 0.2rem; }
 .profile-actions-bar { margin-top: 1.5rem; display: flex; justify-content: flex-end; }
 
-/* Indicadores de Estado y Toasts */
 .status-badge { font-size: 0.75rem; padding: 0.25rem 0.6rem; border-radius: 4px; font-weight: 600; }
 .active-status { background-color: rgba(16, 185, 129, 0.15); color: var(--accent); border: 1px solid var(--accent); }
 .closed-status { background-color: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid var(--danger); }

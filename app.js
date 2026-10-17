@@ -127,7 +127,6 @@ let userFullData = {};
 let currentPollData = null;
 let timerInterval = null;
 
-// Notificaciones Toast
 function showToast(message, type = "info") {
     const container = document.getElementById('toastContainer');
     if (!container) return;
@@ -139,9 +138,6 @@ function showToast(message, type = "info") {
 }
 window.showToast = showToast;
 
-// ==========================================================================
-// PERSISTENCIA DE SESIÓN (LOCALSTORAGE)
-// ==========================================================================
 function guardarSesionEnLocalStorage(data) {
     userFullData = data;
     currentUserId = data.id;
@@ -173,11 +169,8 @@ function restaurarSesionGuardada() {
     }
 }
 
-// ==========================================================================
-// CONEXIÓN Y CONFIGURACIÓN WEB3 EN PRODUCCIÓN (VERCEL / HTTPS)
-// ==========================================================================
 async function solicitarConectarWallet() {
-    console.log('🔍 [MonadHub] Iniciando proceso de conexión con MetaMask...');
+    console.log('🔍 [MonadHub] Iniciando conexión con MetaMask...');
 
     let ethereumProvider = window.ethereum;
     if (window.ethereum && window.ethereum.providers) {
@@ -195,20 +188,19 @@ async function solicitarConectarWallet() {
         const accounts = await ethereumProvider.request({ method: 'eth_requestAccounts' });
 
         if (!accounts || accounts.length === 0) {
-            console.warn('⚠️ [MonadHub] Cuentas no seleccionadas o rechazada la solicitud.');
+            console.warn('⚠️ [MonadHub] No se seleccionó ninguna cuenta.');
             return null;
         }
 
         const walletAddress = accounts[0].toLowerCase();
         console.log('✅ [MonadHub] Cuenta autorizada:', walletAddress);
 
-        // Forzar cambio a Monad Testnet (Chain ID 10143)
         try {
             await ethereumProvider.request({
                 method: 'wallet_switchEthereumChain',
                 params: [{ chainId: MONAD_CHAIN_HEX }]
             });
-            console.log('🌐 [MonadHub] Cambio de red exitoso a Monad Testnet.');
+            console.log('🌐 [MonadHub] Red cambiada a Monad Testnet.');
         } catch (switchError) {
             if (switchError.code === 4902 || switchError.code === -32603) {
                 try {
@@ -222,9 +214,9 @@ async function solicitarConectarWallet() {
                             blockExplorerUrls: ['https://testnet.monadexplorer.com/']
                         }]
                     });
-                    console.log('➕ [MonadHub] Red Monad Testnet registrada en MetaMask.');
+                    console.log('➕ [MonadHub] Red Monad Testnet agregada.');
                 } catch (addError) {
-                    console.error('❌ [MonadHub] Error al agregar la red Monad:', addError);
+                    console.error('❌ [MonadHub] Error agregando red Monad:', addError);
                 }
             }
         }
@@ -269,14 +261,10 @@ async function conectarWalletEditPerfil(e) {
     }
 }
 
-// Exportar globalmente para eventos onclick inline en HTML
 window.solicitarConectarWallet = solicitarConectarWallet;
 window.conectarWalletModal = conectarWalletModal;
 window.conectarWalletEditPerfil = conectarWalletEditPerfil;
 
-// ==========================================================================
-// 1. NAVEGACIÓN Y CAMBIO DE PESTAÑAS (SPA)
-// ==========================================================================
 function activarPestana(tabId) {
     if (!tabId) return;
 
@@ -304,9 +292,6 @@ function activarPestana(tabId) {
 }
 window.activarPestana = activarPestana;
 
-// ==========================================================================
-// 2. AUTENTICACIÓN, REGISTRO Y RECUPERACIÓN DE SESIÓN
-// ==========================================================================
 function toggleAuthMode(mode) {
     const tabLogin = document.getElementById('tabAuthLogin');
     const tabRegister = document.getElementById('tabAuthRegister');
@@ -414,9 +399,6 @@ function cerrarSesion() {
 }
 window.cerrarSesion = cerrarSesion;
 
-// ==========================================================================
-// 3. SLUGS Y OPCIONES DINÁMICAS
-// ==========================================================================
 function renderDynamicOptions(count) {
     const container = document.getElementById('dynamicOptionsContainer');
     if (!container) return;
@@ -433,9 +415,6 @@ function renderDynamicOptions(count) {
     container.innerHTML = html;
 }
 
-// ==========================================================================
-// 4. VOTACIONES ON-CHAIN & SUPABASE
-// ==========================================================================
 async function buscarVotacionPorInput() {
     const val = document.getElementById('numIdVotacion').value.trim();
     if (!val) return showToast("Ingresa un Slug o ID válido.", "error");
@@ -601,9 +580,6 @@ function iniciarTemporizador(endsAtIso) {
     timerInterval = setInterval(updateTimer, 1000);
 }
 
-// ==========================================================================
-// 5. CROWDFUNDING (LA VACA) Y CERTIFICADOS
-// ==========================================================================
 async function guardarVaca(event) {
     event.preventDefault();
     if (!currentUserId) return showToast("Debes iniciar sesión para lanzar una colecta.", "error");
@@ -871,9 +847,6 @@ async function buscarCertificado() {
 }
 window.buscarCertificado = buscarCertificado;
 
-// ==========================================================================
-// 6. PERFIL Y PANEL DE ADMINISTRACIÓN
-// ==========================================================================
 async function cargarMisVotacionesCreadas() {
     const container = document.getElementById('divMyPolls');
     if (!container) return;
@@ -949,9 +922,6 @@ function switchAdminSubTab(subTab) {
 }
 window.switchAdminSubTab = switchAdminSubTab;
 
-// ==========================================================================
-// 7. MÉTRICAS GLOBALES & INICIALIZACIÓN
-// ==========================================================================
 async function cargarMetricasGlobales() {
     try {
         const { count: cPolls } = await supabaseClient.from('polls').select('*', { count: 'exact', head: true });
@@ -991,14 +961,12 @@ async function cargarVotacionesRecientesHome() {
     `).join('');
 }
 
-// Inicializar la aplicación cuando el DOM esté completamente listo
 document.addEventListener("DOMContentLoaded", () => {
     restaurarSesionGuardada();
     renderDynamicOptions(2);
     cargarMetricasGlobales();
     cargarVotacionesRecientesHome();
 
-    // Título dinámico -> Slug
     const txtTitulo = document.getElementById('txtTitulo');
     if (txtTitulo) {
         txtTitulo.addEventListener('input', (e) => {
@@ -1019,14 +987,12 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Listener para cantidad de opciones dinámicas
     const numTotalOpciones = document.getElementById('numTotalOpciones');
     if (numTotalOpciones) {
         numTotalOpciones.addEventListener('input', (e) => renderDynamicOptions(e.target.value));
         numTotalOpciones.addEventListener('change', (e) => renderDynamicOptions(e.target.value));
     }
 
-    // Publicación de Votación
     const btnCrear = document.getElementById('btnCrear');
     if (btnCrear) {
         btnCrear.addEventListener('click', async () => {
@@ -1105,7 +1071,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Formularios Registro, Login y Perfil
     const registroForm = document.getElementById('registroForm');
     if (registroForm) {
         registroForm.addEventListener('submit', async (e) => {
@@ -1254,7 +1219,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Menú Hamburguesa Móvil
     const btnHamburger = document.getElementById('btnHamburger');
     if (btnHamburger) {
         btnHamburger.addEventListener('click', () => {
@@ -1262,7 +1226,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Menú de usuario
     const userMenuTrigger = document.getElementById('userMenuTrigger');
     if (userMenuTrigger) {
         userMenuTrigger.addEventListener('click', () => {
