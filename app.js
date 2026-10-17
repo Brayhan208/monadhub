@@ -127,6 +127,7 @@ let userFullData = {};
 let currentPollData = null;
 let timerInterval = null;
 
+// Sistema de Notificaciones Toast
 function showToast(message, type = "info") {
     const container = document.getElementById('toastContainer');
     if (!container) return;
@@ -138,6 +139,9 @@ function showToast(message, type = "info") {
 }
 window.showToast = showToast;
 
+// ==========================================================================
+// PERSISTENCIA DE SESIÓN (LOCALSTORAGE)
+// ==========================================================================
 function guardarSesionEnLocalStorage(data) {
     userFullData = data;
     currentUserId = data.id;
@@ -169,8 +173,11 @@ function restaurarSesionGuardada() {
     }
 }
 
+// ==========================================================================
+// CONEXIÓN Y CONFIGURACIÓN WEB3 CON METAMASK (SOPORTE HTTPS / VERCEL)
+// ==========================================================================
 async function solicitarConectarWallet() {
-    console.log('🔍 [MonadHub] Iniciando conexión con MetaMask...');
+    console.log('🔍 [MonadHub] Conectando con MetaMask...');
 
     let ethereumProvider = window.ethereum;
     if (window.ethereum && window.ethereum.providers) {
@@ -178,29 +185,28 @@ async function solicitarConectarWallet() {
     }
 
     if (!ethereumProvider) {
-        console.error('❌ [MonadHub] No se encontró proveedor Ethereum.');
-        showToast("MetaMask no detectado. Instala la extensión o abre un navegador Web3.", "error");
+        console.error('❌ [MonadHub] MetaMask no detectado.');
+        showToast("MetaMask no detectado. Instala la extensión para usar Web3.", "error");
         return null;
     }
 
     try {
-        console.log('🦊 [MonadHub] Solicitando eth_requestAccounts...');
         const accounts = await ethereumProvider.request({ method: 'eth_requestAccounts' });
 
         if (!accounts || accounts.length === 0) {
-            console.warn('⚠️ [MonadHub] No se seleccionó ninguna cuenta.');
+            console.warn('⚠️ [MonadHub] Solicitud rechazada por el usuario.');
             return null;
         }
 
         const walletAddress = accounts[0].toLowerCase();
-        console.log('✅ [MonadHub] Cuenta autorizada:', walletAddress);
+        console.log('✅ [MonadHub] Wallet conectada:', walletAddress);
 
+        // Forzar cambio a la red Monad Testnet
         try {
             await ethereumProvider.request({
                 method: 'wallet_switchEthereumChain',
                 params: [{ chainId: MONAD_CHAIN_HEX }]
             });
-            console.log('🌐 [MonadHub] Red cambiada a Monad Testnet.');
         } catch (switchError) {
             if (switchError.code === 4902 || switchError.code === -32603) {
                 try {
@@ -214,9 +220,8 @@ async function solicitarConectarWallet() {
                             blockExplorerUrls: ['https://testnet.monadexplorer.com/']
                         }]
                     });
-                    console.log('➕ [MonadHub] Red Monad Testnet agregada.');
                 } catch (addError) {
-                    console.error('❌ [MonadHub] Error agregando red Monad:', addError);
+                    console.error('❌ Error agregando red Monad:', addError);
                 }
             }
         }
@@ -231,7 +236,7 @@ async function solicitarConectarWallet() {
         return walletAddress;
 
     } catch (err) {
-        console.error('❌ [MonadHub] Error en solicitarConectarWallet:', err);
+        console.error('❌ Error en solicitarConectarWallet:', err);
         showToast("Error al conectar wallet: " + (err.message || err), "error");
         return null;
     }
@@ -239,8 +244,6 @@ async function solicitarConectarWallet() {
 
 async function conectarWalletModal(e) {
     if (e && e.preventDefault) e.preventDefault();
-    console.log('🖱️ [MonadHub] Conectar wallet desde Modal Registro');
-
     const addr = await solicitarConectarWallet();
     if (addr) {
         const input = document.getElementById('txtWalletAuth');
@@ -251,8 +254,6 @@ async function conectarWalletModal(e) {
 
 async function conectarWalletEditPerfil(e) {
     if (e && e.preventDefault) e.preventDefault();
-    console.log('🖱️ [MonadHub] Vincular wallet desde Modal Perfil');
-
     const addr = await solicitarConectarWallet();
     if (addr) {
         const input = document.getElementById('editWalletAddress');
@@ -265,6 +266,9 @@ window.solicitarConectarWallet = solicitarConectarWallet;
 window.conectarWalletModal = conectarWalletModal;
 window.conectarWalletEditPerfil = conectarWalletEditPerfil;
 
+// ==========================================================================
+// NAVEGACIÓN Y PESTAÑAS (SPA)
+// ==========================================================================
 function activarPestana(tabId) {
     if (!tabId) return;
 
@@ -323,11 +327,11 @@ function cerrarModalAuth() {
 
 function mostrarOlvidastePassword(e) {
     if (e) e.preventDefault();
-    const mail = prompt("Ingresa tu correo electrónico registrado para restablecer tu contraseña:");
+    const mail = prompt("Ingresa tu correo electrónico registrado:");
     if (mail && mail.includes('@')) {
-        showToast("Instrucciones enviadas exitosamente a " + mail, "success");
+        showToast("Instrucciones enviadas a " + mail, "success");
     } else if (mail !== null) {
-        showToast("Ingresa un correo electrónico válido.", "error");
+        showToast("Ingresa un correo válido.", "error");
     }
 }
 
@@ -399,6 +403,9 @@ function cerrarSesion() {
 }
 window.cerrarSesion = cerrarSesion;
 
+// ==========================================================================
+// OPCIONES DINÁMICAS Y VOTACIONES
+// ==========================================================================
 function renderDynamicOptions(count) {
     const container = document.getElementById('dynamicOptionsContainer');
     if (!container) return;
@@ -580,6 +587,9 @@ function iniciarTemporizador(endsAtIso) {
     timerInterval = setInterval(updateTimer, 1000);
 }
 
+// ==========================================================================
+// CROWDFUNDING Y CERTIFICADOS
+// ==========================================================================
 async function guardarVaca(event) {
     event.preventDefault();
     if (!currentUserId) return showToast("Debes iniciar sesión para lanzar una colecta.", "error");
@@ -961,12 +971,54 @@ async function cargarVotacionesRecientesHome() {
     `).join('');
 }
 
+// ==========================================================================
+// INICIALIZACIÓN Y MANEJADORES DE EVENTOS
+// ==========================================================================
 document.addEventListener("DOMContentLoaded", () => {
     restaurarSesionGuardada();
     renderDynamicOptions(2);
     cargarMetricasGlobales();
     cargarVotacionesRecientesHome();
 
+    // 1. AUTOCÁLCULO DE EDAD A PARTIR DE FECHA DE NACIMIENTO
+    const regFechaNac = document.getElementById('regFechaNacimiento');
+    if (regFechaNac) {
+        const calcularEdad = (valorFecha) => {
+            if (!valorFecha) return;
+            const fecha = new Date(valorFecha);
+            const hoy = new Date();
+            let edad = hoy.getFullYear() - fecha.getFullYear();
+            const m = hoy.getMonth() - fecha.getMonth();
+            if (m < 0 || (m === 0 && hoy.getDate() < fecha.getDate())) {
+                edad--;
+            }
+            const inputEdad = document.getElementById('regEdad');
+            if (inputEdad) inputEdad.value = edad >= 0 ? edad : 0;
+        };
+        regFechaNac.addEventListener('change', (e) => calcularEdad(e.target.value));
+        regFechaNac.addEventListener('input', (e) => calcularEdad(e.target.value));
+    }
+
+    // 2. AUTOGENERACIÓN DE USUARIO A PARTIR DEL CORREO
+    const regEmailInput = document.getElementById('regEmail');
+    if (regEmailInput) {
+        regEmailInput.addEventListener('input', (e) => {
+            const val = e.target.value.trim();
+            const inputUsuario = document.getElementById('regUsuario');
+            if (inputUsuario) {
+                if (val.includes('@')) {
+                    const alias = val.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '');
+                    inputUsuario.value = alias ? alias + '_monad' : '';
+                } else if (val) {
+                    inputUsuario.value = val.toLowerCase().replace(/[^a-z0-9_]/g, '') + '_monad';
+                } else {
+                    inputUsuario.value = '';
+                }
+            }
+        });
+    }
+
+    // Generador de Slug dinámico a partir del título
     const txtTitulo = document.getElementById('txtTitulo');
     if (txtTitulo) {
         txtTitulo.addEventListener('input', (e) => {
@@ -987,12 +1039,14 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // Selector de cantidad de opciones dinámicas
     const numTotalOpciones = document.getElementById('numTotalOpciones');
     if (numTotalOpciones) {
         numTotalOpciones.addEventListener('input', (e) => renderDynamicOptions(e.target.value));
         numTotalOpciones.addEventListener('change', (e) => renderDynamicOptions(e.target.value));
     }
 
+    // Publicación de Votación
     const btnCrear = document.getElementById('btnCrear');
     if (btnCrear) {
         btnCrear.addEventListener('click', async () => {
@@ -1071,6 +1125,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // Formulario de Registro
     const registroForm = document.getElementById('registroForm');
     if (registroForm) {
         registroForm.addEventListener('submit', async (e) => {
@@ -1125,6 +1180,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // Formulario de Inicio de Sesión
     const loginForm = document.getElementById('loginForm');
     if (loginForm) {
         loginForm.addEventListener('submit', async (e) => {
@@ -1174,6 +1230,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // Formulario de Edición de Perfil
     const formEditProfile = document.getElementById('formEditProfile');
     if (formEditProfile) {
         formEditProfile.addEventListener('submit', async (e) => {
@@ -1219,6 +1276,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // Menú Hamburguesa Móvil
     const btnHamburger = document.getElementById('btnHamburger');
     if (btnHamburger) {
         btnHamburger.addEventListener('click', () => {
@@ -1226,6 +1284,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // Menú Desplegable de Usuario
     const userMenuTrigger = document.getElementById('userMenuTrigger');
     if (userMenuTrigger) {
         userMenuTrigger.addEventListener('click', () => {
