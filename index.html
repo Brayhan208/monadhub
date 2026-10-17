@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MonadHub - Gobernanza y Votaciones On-Chain</title>
+    
+    <!-- Hoja de Estilos Principal -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <!-- Librerías CDN Oficiales -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+    <!-- NOTIFICACIONES TOAST -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- MODAL DE AUTENTICACION Y REGISTRO -->
+    <div id="modalAuth" class="modal overlay-hidden" tabindex="-1">
+        <div class="modal-content card">
+            <!-- Botón de Cierre "X" en Esquina Superior Derecha -->
+            <button id="btnCloseAuthModal" type="button" class="btn-close-modal" onclick="cerrarModalAuth()" aria-label="Cerrar modal">&times;</button>
+
+            <div class="auth-tabs">
+                <button id="tabAuthLogin" type="button" class="auth-tab-btn active" onclick="toggleAuthMode('login')">Iniciar Sesión</button>
+                <button id="tabAuthRegister" type="button" class="auth-tab-btn" onclick="toggleAuthMode('register')">Registrarse</button>
+            </div>
+
+            <!-- FORMULARIO INICIO DE SESION -->
+            <form id="loginForm" class="auth-form-container">
+                <p class="modal-sub">Ingresa tus credenciales para acceder a la plataforma.</p>
+                <div class="form-group">
+                    <label for="loginEmail">Correo Electrónico o Usuario</label>
+                    <input type="text" id="loginEmail" class="form-control" placeholder="usuario o correo@dominio.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Contraseña</label>
+                    <input type="password" id="loginPassword" class="form-control" placeholder="••••••••" required>
+                </div>
+                
+                <button type="submit" class="btn-primary">Iniciar Sesión</button>
+
+                <!-- Enlaces Secundarios Armonizados -->
+                <div class="auth-secondary-links">
+                    <a href="#" id="linkForgotPassword" onclick="mostrarOlvidastePassword(event)">¿Olvidaste tu contraseña?</a>
+                    <a href="#" onclick="toggleAuthMode('register'); return false;">Crear perfil / Registrarse</a>
+                </div>
+
+                <!-- Botón Volver al Inicio Perfectamente Centrado -->
+                <div class="auth-center-action">
+                    <button type="button" class="btn-secondary btn-return-home" onclick="cerrarModalAuth()">Volver al Inicio</button>
+                </div>
+            </form>
+
+            <!-- FORMULARIO REGISTRO -->
+            <form id="registroForm" class="auth-form-container hidden">
+                <p class="modal-sub">Crea tu cuenta e integra tu billetera Web3 individual.</p>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="regNombre">Nombre</label>
+                        <input type="text" id="regNombre" class="form-control" placeholder="Tu nombre" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="regApellidos">Apellidos</label>
+                        <input type="text" id="regApellidos" class="form-control" placeholder="Tus apellidos" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="regFechaNacimiento">Fecha de Nacimiento</label>
+                        <input type="date" id="regFechaNacimiento" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="regEdad">Edad</label>
+                        <input type="number" id="regEdad" class="form-control" readonly placeholder="0">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="regEmail">Correo Electrónico</label>
+                    <input type="email" id="regEmail" class="form-control" placeholder="correo@ejemplo.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="regUsuario">Usuario (Autogenerado)</label>
+                    <input type="text" id="regUsuario" class="form-control" readonly placeholder="usuario_monad">
+                </div>
+
+                <div class="form-group">
+                    <label for="regPassword">Contraseña</label>
+                    <input type="password" id="regPassword" class="form-control" placeholder="Mínimo 8 caracteres" required>
+                    <small class="password-requirements">Debe tener al menos 8 caracteres, 2 números, 1 mayúscula y 1 carácter especial.</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="regConfirmPassword">Confirmar Contraseña</label>
+                    <input type="password" id="regConfirmPassword" class="form-control" placeholder="Repita su contraseña" required>
+                </div>
+
+                <!-- Selector de Avatar Compacto -->
+                <div class="form-group">
+                    <label>Selecciona tu Avatar:</label>
+                    <div class="avatar-options avatar-options-compact">
+                        <label class="avatar-option">
+                            <input type="radio" name="avatarSelect" value="avatar1.png" checked>
+                            <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Monad1" alt="Avatar 1">
+                        </label>
+                        <label class="avatar-option">
+                            <input type="radio" name="avatarSelect" value="avatar2.png">
+                            <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Monad2" alt="Avatar 2">
+                        </label>
+                        <label class="avatar-option">
+                            <input type="radio" name="avatarSelect" value="avatar3.png">
+                            <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Monad3" alt="Avatar 3">
+                        </label>
+                        <label class="avatar-option">
+                            <input type="radio" name="avatarSelect" value="avatar4.png">
+                            <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Monad4" alt="Avatar 4">
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="txtWalletAuth">Wallet Web3 Individual</label>
+                    <div class="wallet-input-group">
+                        <input type="text" id="txtWalletAuth" class="form-control" readonly placeholder="Billetera no detectada...">
+                        <button type="button" id="btnConnectWalletModal" class="btn-secondary">Conectar Billetera</button>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="submit" class="btn-primary" id="btnRegistrar">Completar Registro</button>
+                    <button type="button" class="btn-secondary" onclick="cerrarModalAuth()">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL DE EDICIÓN DE PERFIL -->
+    <div id="modalEditProfile" class="modal overlay-hidden">
+        <div class="modal-content card">
+            <button type="button" class="btn-close-modal" onclick="cerrarModalEditProfile()">&times;</button>
+            <h2>Editar Perfil de Usuario</h2>
+            <p class="modal-sub">Actualiza tus datos personales, contraseña o dirección de billetera asociada.</p>
+
+            <form id="formEditProfile">
+                <div class="form-group">
+                    <label for="editFullName">Nombre Completo</label>
+                    <input type="text" id="editFullName" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="editUsername">Nombre de Usuario</label>
+                    <input type="text" id="editUsername" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="editEmail">Correo Electrónico</label>
+                    <input type="email" id="editEmail" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="editNewPassword">Nueva Contraseña (Opcional)</label>
+                    <input type="password" id="editNewPassword" class="form-control" placeholder="Dejar en blanco para conservar la actual">
+                </div>
+
+                <div class="form-group">
+                    <label for="editWalletAddress">Dirección de Billetera Asignada</label>
+                    <div class="wallet-input-group">
+                        <input type="text" id="editWalletAddress" class="form-control">
+                        <button type="button" id="btnUpdateWalletAddress" class="btn-secondary">Vincular Nueva</button>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="submit" class="btn-primary">Guardar Cambios</button>
+                    <button type="button" class="btn-secondary" onclick="cerrarModalEditProfile()">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- BARRA SUPERIOR DE NAVEGACIÓN (TOOLBAR CENTRADA CON HOVER Y EVENTOS) -->
+    <header class="navbar">
+        <a href="#tabInicio" class="brand" id="logoBrand" onclick="activarPestana('tabInicio'); return false;">
+            <span class="logo-text">MonadHub</span>
+            <span class="badge-network">Monad Testnet</span>
+        </a>
+
+        <button class="hamburger-btn" id="btnHamburger" aria-label="Abrir Menú">
+            <span class="bar"></span>
+            <span class="bar"></span>
+            <span class="bar"></span>
+        </button>
+
+        <nav class="nav-tabs" id="navMenu">
+            <button type="button" class="tab-btn active" data-tab="tabInicio" onclick="activarPestana('tabInicio')">Inicio</button>
+            <button type="button" class="tab-btn" data-tab="tabExplora" onclick="activarPestana('tabExplora')">Explora y Vota</button>
+            <button type="button" class="tab-btn" data-tab="tabCrear" onclick="activarPestana('tabCrear')">Crear Votación</button>
+            <button type="button" class="tab-btn" data-tab="tabVaca" onclick="activarPestana('tabVaca')">La Vaca</button>
+            <button type="button" class="tab-btn" data-tab="tabCertificados" onclick="activarPestana('tabCertificados')">Certificados</button>
+            <button type="button" class="tab-btn hidden" id="navTabPerfil" data-tab="tabPerfil" onclick="activarPestana('tabPerfil')">Mi Perfil</button>
+        </nav>
+
+        <div class="user-widget">
+            <button type="button" id="btnAuthHeader" class="btn-connect" onclick="abrirModalAuth()">Iniciar sesión / Registrarse</button>
+
+            <div id="userInfo" class="user-info-dropdown-container hidden">
+                <div class="user-info-trigger" id="userMenuTrigger">
+                    <img id="userHeaderAvatar" src="https://api.dicebear.com/7.x/bottts/svg?seed=Monad1" alt="Avatar" class="header-avatar">
+                    <div class="user-text-details">
+                        <span id="lblUserRole" class="role-badge hidden">Administrador</span>
+                        <span id="lblUserEmail" class="user-email">usuario@dominio.com</span>
+                        <span id="lblWalletChip" class="wallet-chip">0x00...0000</span>
+                    </div>
+                    <i class="fas fa-chevron-down dropdown-icon"></i>
+                </div>
+
+                <div id="userDropdownMenu" class="user-dropdown-menu hidden">
+                    <button type="button" class="dropdown-item" onclick="activarPestana('tabPerfil')"><i class="fas fa-user"></i> Mi Perfil</button>
+                    <button type="button" class="dropdown-item" onclick="abrirModalEditProfile()"><i class="fas fa-edit"></i> Editar Datos</button>
+                    <button type="button" class="dropdown-item" onclick="activarPestana('tabPerfil')"><i class="fas fa-list-alt"></i> Mis Actividades</button>
+                    <hr class="dropdown-divider">
+                    <button type="button" class="dropdown-item text-danger" onclick="cerrarSesion()"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- CONTENIDO PRINCIPAL (SPA) -->
+    <main class="main-container">
+
+        <!-- PESTAÑA 1: INICIO -->
+        <div id="tabInicio" class="tab-content active">
+            <section class="hero-section card">
+                <h1 class="hero-title">Gobernanza Descentralizada y Votaciones On-Chain</h1>
+                <p class="hero-sub">Participa en votaciones verificables y transparentes protegidas criptográficamente en la red Monad Testnet.</p>
+                <div class="hero-buttons">
+                    <button type="button" class="btn-primary hero-btn" onclick="activarPestana('tabExplora')">Explorar Votaciones</button>
+                    <button type="button" class="btn-secondary hero-btn" onclick="activarPestana('tabCrear')">Crear Nueva Votación</button>
+                </div>
+            </section>
+
+            <!-- Métricas Dinámicas Iniciando en 0 -->
+            <section class="metrics-grid">
+                <div class="metric-card card">
+                    <span class="metric-label">Vacas Creadas</span>
+                    <span class="metric-value" id="valMetricsVacas">0</span>
+                </div>
+                <div class="metric-card card">
+                    <span class="metric-label">Certificados Emitidos</span>
+                    <span class="metric-value" id="valMetricsCertificados">0</span>
+                </div>
+                <div class="metric-card card">
+                    <span class="metric-label">Votaciones Creadas</span>
+                    <span class="metric-value" id="valMetricsPolls">0</span>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2>Beneficios de MonadHub</h2>
+                <ul class="benefits-list">
+                    <li>Espacio transparente para decisiones comunitarias verificables on-chain.</li>
+                    <li>Registro inmutable de votos mediante firmas digitales EIP-191 con MetaMask.</li>
+                    <li>Sincronización en tiempo real de resultados con Supabase Cloud.</li>
+                </ul>
+            </section>
+
+            <section class="card">
+                <div class="card-header">
+                    <h2>Votaciones Recientes en la Red</h2>
+                    <button type="button" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="activarPestana('tabExplora')">Ver Todas</button>
+                </div>
+                <div id="divRecentPollsHome" class="grid-list">
+                    <p class="empty-msg">Cargando votaciones activas desde la base de datos...</p>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2>Contáctenos</h2>
+                <form id="formulario-contacto" onsubmit="event.preventDefault(); showToast('Mensaje enviado con éxito.', 'success'); e.target.reset();">
+                    <div class="form-group">
+                        <label>Nombre</label>
+                        <input type="text" class="form-control" placeholder="Su nombre" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Correo Electrónico</label>
+                        <input type="email" class="form-control" placeholder="correo@ejemplo.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Mensaje</label>
+                        <textarea class="form-control" rows="3" placeholder="Escriba su consulta..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn-primary">Enviar Mensaje</button>
+                </form>
+            </section>
+        </div>
+
+        <!-- PESTAÑA 2: EXPLORA Y VOTA -->
+        <div id="tabExplora" class="tab-content">
+            <section class="card">
+                <div class="card-header">
+                    <h2>Panel de Votación Activa</h2>
+                    <span id="badgeEstadoVotacion" class="status-badge active-status">En Curso</span>
+                </div>
+
+                <div class="search-box">
+                    <input type="text" id="numIdVotacion" class="form-control" placeholder="Ingresa el Slug o ID de la votación">
+                    <button type="button" id="btnCargar" class="btn-secondary" onclick="buscarVotacionPorInput()">Cargar Votación</button>
+                </div>
+
+                <div id="divDetalle" class="votacion-detalle"></div>
+
+                <div id="timerContainer" class="timer-container hidden">
+                    <span class="timer-label">Tiempo Restante para Cierre:</span>
+                    <div class="timer-grid">
+                        <div class="timer-box"><span id="timerDays">00</span><small>Días</small></div>
+                        <div class="timer-box"><span id="timerHours">00</span><small>Horas</small></div>
+                        <div class="timer-box"><span id="timerMinutes">00</span><small>Minutos</small></div>
+                        <div class="timer-box"><span id="timerSeconds">00</span><small>Segundos</small></div>
+                    </div>
+                </div>
+
+                <div id="divOpciones" class="opciones-container"></div>
+
+                <div id="shareModule" class="share-module hidden">
+                    <hr class="separator">
+                    <h3>Compartir Votación</h3>
+                    <div class="share-link-group">
+                        <input type="text" id="txtShareLink" class="form-control" readonly>
+                        <button type="button" id="btnCopyShareLink" class="btn-secondary" onclick="copiarEnlaceCompartir()">Copiar Enlace</button>
+                    </div>
+                    <div class="qr-container">
+                        <p class="qr-label">Código QR de Acceso Rápido</p>
+                        <div id="qrcode"></div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- PESTAÑA 3: CREAR VOTACIÓN (SLUG ÚNICO Y DINÁMICO) -->
+        <div id="tabCrear" class="tab-content">
+            <section class="card">
+                <div class="card-header">
+                    <h2>Configuración de Nueva Votación</h2>
+                    <span class="card-badge">Publicación On-Chain</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="txtTitulo">Título o Pregunta Principal:</label>
+                    <input type="text" id="txtTitulo" class="form-control" placeholder="Ejemplo: Elección de Junta Directiva 2026">
+                </div>
+
+                <div class="form-group">
+                    <label>Slug de URL Generado Automáticamente (Único):</label>
+                    <input type="text" id="txtSlugGenerado" class="form-control" readonly placeholder="/votacion/eleccion-de-junta-directiva-2026-x8f2">
+                </div>
+
+                <div class="form-group">
+                    <label for="numTotalOpciones">Número Total de Opciones (2 a 10):</label>
+                    <input type="number" id="numTotalOpciones" class="form-control" min="2" max="10" value="2">
+                </div>
+
+                <!-- Contenedor Dinámico para Opciones -->
+                <div id="dynamicOptionsContainer" class="dynamic-options-container"></div>
+
+                <div class="form-group">
+                    <label for="txtFechaFin">Fecha y Hora Límite de Cierre (DatePicker):</label>
+                    <input type="datetime-local" id="txtFechaFin" class="form-control date-picker-input">
+                </div>
+
+                <button type="button" id="btnCrear" class="btn-action">Publicar Votación</button>
+            </section>
+        </div>
+
+        <!-- PESTAÑA 4: LA VACA (CROWDFUNDING) -->
+        <div id="tabVaca" class="tab-content">
+            <section class="card">
+                <div class="card-header">
+                    <h2>Crear una nueva vaca</h2>
+                    <span class="card-badge">Fondo MON</span>
+                </div>
+
+                <form id="formCrearVaca" onsubmit="guardarVaca(event)">
+                    <div class="form-group">
+                        <label for="txtVacaTitulo">Título de la colecta:</label>
+                        <input type="text" id="txtVacaTitulo" class="form-control" placeholder="Ej: Pizza para compartir" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="txtVacaDescripcion">Descripción del proyecto:</label>
+                        <input type="text" id="txtVacaDescripcion" class="form-control" placeholder="Describe brevemente el destino de los fondos..." required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="numVacaMeta">Meta en MON:</label>
+                        <input type="number" id="numVacaMeta" class="form-control" step="0.001" min="0.001" placeholder="Ej: 50" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="txtVacaFechaFin">Fecha y hora de cierre:</label>
+                        <input type="datetime-local" id="txtVacaFechaFin" class="form-control date-picker-input" required>
+                    </div>
+
+                    <button type="submit" class="btn-action">Lanzar colecta</button>
+                </form>
+            </section>
+
+            <section class="card">
+                <div class="card-header">
+                    <h2>Campaña de La Vaca - Colectas On-Chain</h2>
+                    <button type="button" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="cargarCampanasVaca()">Actualizar lista</button>
+                </div>
+                <p style="color: var(--text-sec); font-size: 0.9rem; margin-bottom: 1.5rem;">
+                    Aporta MON directamente a las iniciativas de la comunidad de forma transparente en Monad Testnet.
+                </p>
+
+                <div id="divCampanasVacaContainer">
+                    <p class="empty-msg">Sincronizando colectas...</p>
+                </div>
+            </section>
+        </div>
+
+        <!-- PESTAÑA 5: CERTIFICADOS -->
+        <div id="tabCertificados" class="tab-content">
+            <section class="card">
+                <div class="card-header">
+                    <h2>Emitir Certificado On-Chain</h2>
+                    <span class="card-badge">Acreditación Web3</span>
+                </div>
+
+                <form id="formEmitirCertificado" onsubmit="emitirCertificado(event)">
+                    <div class="form-group">
+                        <label for="txtCertNombre">Nombre del Destinatario:</label>
+                        <input type="text" id="txtCertNombre" class="form-control" placeholder="Ej: Maria Perez" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="txtCertWallet">Dirección de Wallet del Destinatario:</label>
+                        <input type="text" id="txtCertWallet" class="form-control" placeholder="0x0000...0000" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="txtCertTitulo">Título o Motivo de la Acreditación:</label>
+                        <input type="text" id="txtCertTitulo" class="form-control" placeholder="Ej: Participación en Gobernanza Monad Q4" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="txtCertFecha">Fecha de Emisión:</label>
+                        <input type="date" id="txtCertFecha" class="form-control date-picker-input" required>
+                    </div>
+
+                    <button type="submit" class="btn-action">Emitir Certificado</button>
+                </form>
+            </section>
+
+            <section class="card">
+                <div class="card-header">
+                    <h2>Verificación de Certificados On-Chain</h2>
+                    <button type="button" class="btn-secondary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;" onclick="cargarCertificados()">Actualizar lista</button>
+                </div>
+                <p style="color: var(--text-sec); font-size: 0.9rem; margin-bottom: 1.5rem;">
+                    Consulta y verifica la inmutabilidad de las credenciales registradas en la blockchain de Monad Testnet.
+                </p>
+
+                <div class="search-box">
+                    <input type="text" id="txtSearchCertId" class="form-control" placeholder="Ingresa el ID del Certificado o dirección de Wallet">
+                    <button type="button" id="btnBuscarCert" class="btn-secondary" onclick="buscarCertificado()">Buscar Certificado</button>
+                </div>
+
+                <div id="divCertificadosContainer">
+                    <p class="empty-msg">Sincronizando el registro de certificados...</p>
+                </div>
+            </section>
+        </div>
+
+        <!-- PESTAÑA 6: MI PERFIL Y PANEL ADMIN -->
+        <div id="tabPerfil" class="tab-content">
+            <section class="card">
+                <div class="profile-header-container">
+                    <img id="profileAvatarImg" src="https://api.dicebear.com/7.x/bottts/svg?seed=Monad1" alt="Avatar" class="profile-avatar-lg">
+                    <div>
+                        <h2 id="profUsernameDisplay">Usuario</h2>
+                        <span id="badgePerfilRol" class="status-badge active-status">Votante Activo</span>
+                    </div>
+                </div>
+
+                <div class="profile-details-grid">
+                    <div class="info-item"><strong>Nombre Completo:</strong> <span id="profNombreComp">--</span></div>
+                    <div class="info-item"><strong>Correo Electrónico:</strong> <span id="profEmail">--</span></div>
+                    <div class="info-item"><strong>Fecha Nacimiento:</strong> <span id="profFechaNac">--</span></div>
+                    <div class="info-item"><strong>Edad:</strong> <span id="profEdad">--</span></div>
+                    <div class="info-item"><strong>Wallet Vinculada:</strong> <span id="profWallet">Desconectada</span></div>
+                </div>
+
+                <div class="profile-actions-bar">
+                    <button type="button" class="btn-primary" onclick="abrirModalEditProfile()">Editar Perfil</button>
+                </div>
+            </section>
+
+            <!-- SECCIÓN ADMIN -->
+            <section id="adminPanelSection" class="card hidden">
+                <div class="card-header">
+                    <h2>Panel Privilegiado de Administración</h2>
+                    <span class="card-badge">Modo Admin</span>
+                </div>
+                <p style="color: var(--text-sec); font-size: 0.9rem; margin-bottom: 1.5rem;">
+                    Gestión global de usuarios registrados, moderación de votaciones, colectas y certificados del sistema.
+                </p>
+
+                <div class="admin-tabs">
+                    <button type="button" class="btn-secondary active" id="btnAdminUsersTab" onclick="switchAdminSubTab('users')">Usuarios Registrados</button>
+                    <button type="button" class="btn-secondary" id="btnAdminContentTab" onclick="switchAdminSubTab('content')">Moderación de Contenido</button>
+                </div>
+
+                <div id="adminUsersSubTab" class="admin-subtab-container">
+                    <div class="table-responsive">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Usuario</th>
+                                    <th>Email</th>
+                                    <th>Rol</th>
+                                    <th>Wallet</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminUsersTableBody">
+                                <tr><td colspan="5" class="empty-msg">Cargando usuarios de la base de datos...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="adminContentSubTab" class="admin-subtab-container hidden">
+                    <div id="adminModerationContainer">
+                        <p class="empty-msg">Cargando actividades y contenidos para moderación...</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="card-header">
+                    <h2>Mis Votaciones Creadas</h2>
+                    <span class="card-badge">Panel de Creador</span>
+                </div>
+                <div id="divMyPolls" class="history-list">
+                    <p class="empty-msg">Cargando votaciones asociadas a tu cuenta...</p>
+                </div>
+            </section>
+
+            <section class="card">
+                <h2>Historial de Actividad de Votos</h2>
+                <div id="divHistorial" class="history-list">
+                    <p class="empty-msg">No hay registros de votos en esta sesión.</p>
+                </div>
+            </section>
+        </div>
+
+    </main>
+
+    <footer class="footer">
+        <p>MonadHub - Plataforma de Gobernanza Descentralizada | Monad Testnet (Chain ID 10143) | Supabase Cloud</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
