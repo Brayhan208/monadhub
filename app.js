@@ -1125,7 +1125,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Formulario de Registro
+    // Formulario de Registro (CORREGIDO: Se elimina 'nombre' para evitar error de caché SQL)
     const registroForm = document.getElementById('registroForm');
     if (registroForm) {
         registroForm.addEventListener('submit', async (e) => {
@@ -1160,7 +1160,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         wallet_address: wallet ? wallet.toLowerCase() : '',
                         role: 'Votante',
                         full_name: `${nombre} ${apellidos}`,
-                        nombre: `${nombre} ${apellidos}`,
                         birth_date: fechaNac,
                         age: parseInt(edad) || 0,
                         avatar_url: avatar
@@ -1193,7 +1192,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 const seededAdmin = {
                     id: '00000000-0000-0000-0000-000000000001',
                     full_name: 'Administrador del Sistema',
-                    nombre: 'Administrador MonadHub',
                     username: 'admin',
                     email: 'admin@monadhub.xyz',
                     role: 'Administrador',
@@ -1245,7 +1243,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const updateData = {
                 full_name: editFullName,
-                nombre: editFullName,
                 username: editUsername,
                 email: editEmail,
                 wallet_address: editWalletAddress || null
