@@ -193,7 +193,7 @@
             <span class="badge-network">Monad Testnet</span>
         </a>
 
-        <button class="hamburger-btn" id="btnHamburger" aria-label="Abrir Menú">
+        <button type="button" class="hamburger-btn" id="btnHamburger" aria-label="Abrir Menú">
             <span class="bar"></span>
             <span class="bar"></span>
             <span class="bar"></span>
@@ -247,7 +247,7 @@
                 </div>
             </section>
 
-            <!-- Métricas Dinámicas Iniciando en 0 -->
+            <!-- Métricas Dinámicas -->
             <section class="metrics-grid">
                 <div class="metric-card card">
                     <span class="metric-label">Vacas Creadas</span>
@@ -284,7 +284,7 @@
 
             <section class="card">
                 <h2>Contáctenos</h2>
-                <form id="formulario-contacto" onsubmit="event.preventDefault(); showToast('Mensaje enviado con éxito.', 'success'); e.target.reset();">
+                <form id="formulario-contacto" onsubmit="event.preventDefault(); if (typeof showToast === 'function') showToast('Mensaje enviado con éxito.', 'success'); this.reset();">
                     <div class="form-group">
                         <label>Nombre</label>
                         <input type="text" class="form-control" placeholder="Su nombre" required>
@@ -344,7 +344,7 @@
             </section>
         </div>
 
-        <!-- PESTAÑA 3: CREAR VOTACIÓN (SLUG ÚNICO Y DINÁMICO) -->
+        <!-- PESTAÑA 3: CREAR VOTACIÓN -->
         <div id="tabCrear" class="tab-content">
             <section class="card">
                 <div class="card-header">
@@ -569,6 +569,7 @@
         <p>MonadHub - Plataforma de Gobernanza Descentralizada | Monad Testnet (Chain ID 10143) | Supabase Cloud</p>
     </footer>
 
+    <!-- Script de lógica principal -->
     <script src="app.js"></script>
 </body>
 </html>
