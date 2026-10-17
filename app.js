@@ -1,9 +1,10 @@
-// Configuración Supabase Cloud Client
+// ==========================================================================
+// CONFIGURACIÓN SUPABASE CLOUD & SMART CONTRACT (MONAD TESTNET - CHAIN ID 10143)
+// ==========================================================================
 const SUPABASE_URL = "https://svakbezwiscpabtbhoxh.supabase.co";
 const SUPABASE_KEY = "sb_publishable_JEwBlW9FLPAGzQbYUjWDhA_v_8vmoqt";
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Configuración Smart Contract Web3 (Monad Testnet - Chain ID 10143)
 const CONTRACT_ADDRESS = "0x3b741698A2b4399bAB93368722afa5e946274937"; 
 
 const CONTRACT_ABI = [
@@ -60,9 +61,7 @@ const CONTRACT_ABI = [
         "type": "event"
     },
     {
-        "inputs": [
-            { "internalType": "uint256", "name": "_vacaId", "type": "uint256" }
-        ],
+        "inputs": [{ "internalType": "uint256", "name": "_vacaId", "type": "uint256" }],
         "name": "aportarAVaca",
         "outputs": [],
         "stateMutability": "payable",
@@ -113,7 +112,10 @@ const CONTRACT_ABI = [
 ];
 
 // Estado Global de la Aplicación
-let provider, signer, contract;
+let provider = null;
+let signer = null;
+let contract = null;
+
 let userAddress = "";
 let currentUserId = null;
 let userEmail = "";
@@ -124,7 +126,7 @@ let userFullData = {};
 let currentPollData = null;
 let timerInterval = null;
 
-// Notificaciones Toast (Límpias)
+// Notificaciones Toast
 function showToast(message, type = "info") {
     const container = document.getElementById('toastContainer');
     if (!container) return;
@@ -133,6 +135,80 @@ function showToast(message, type = "info") {
     toast.innerText = message;
     container.appendChild(toast);
     setTimeout(() => toast.remove(), 4000);
+}
+
+// ==========================================================================
+// PERSISTENCIA DE SESIÓN (LOCALSTORAGE)
+// ==========================================================================
+function guardarSesionEnLocalStorage(data) {
+    userFullData = data;
+    currentUserId = data.id;
+    userEmail = data.email || '';
+    username = data.username || '';
+    userAddress = data.wallet_address || '';
+    userRol = data.role || 'Votante';
+
+    localStorage.setItem('monadhub_session', JSON.stringify(data));
+    mostrarInterfazConectada();
+}
+
+function restaurarSesionGuardada() {
+    const sessionRaw = localStorage.getItem('monadhub_session');
+    if (sessionRaw) {
+        try {
+            const data = JSON.parse(sessionRaw);
+            userFullData = data;
+            currentUserId = data.id;
+            userEmail = data.email || '';
+            username = data.username || '';
+            userAddress = data.wallet_address || '';
+            userRol = data.role || 'Votante';
+            mostrarInterfazConectada();
+        } catch (e) {
+            console.error("Error al restaurar la sesión guardada:", e);
+            localStorage.removeItem('monadhub_session');
+        }
+    }
+}
+
+// ==========================================================================
+// CONEXIÓN Y CONFIGURACIÓN WEB3 (METAMASK)
+// ==========================================================================
+async function inicializarWeb3() {
+    if (typeof window.ethereum !== 'undefined') {
+        try {
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            const accounts = await provider.listAccounts();
+            if (accounts.length > 0) {
+                signer = provider.getSigner();
+                userAddress = (await signer.getAddress()).toLowerCase();
+                contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+            }
+        } catch (err) {
+            console.warn("No se pudo auto-conectar Ethers.js:", err);
+        }
+    }
+}
+
+async function solicitarConectarWallet() {
+    if (typeof window.ethereum === 'undefined') {
+        showToast("MetaMask no detectado. Instala la extensión para usar Web3.", "error");
+        return null;
+    }
+
+    try {
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+        const address = await signer.getAddress();
+        userAddress = address.toLowerCase();
+        contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+        return userAddress;
+    } catch (err) {
+        console.error("Error al conectar wallet:", err);
+        showToast("No se pudo conectar la billetera: " + err.message, "error");
+        return null;
+    }
 }
 
 // ==========================================================================
@@ -160,7 +236,7 @@ function activarPestana(tabId) {
     if (tabId === 'tabCertificados') cargarCertificados();
     if (tabId === 'tabPerfil') {
         cargarMisVotacionesCreadas();
-        if (userRol === 'Administrador') cargarDatosAdminPanel();
+        if (userRol === 'Administrador' || userRol === 'admin') cargarDatosAdminPanel();
     }
 }
 
@@ -227,7 +303,7 @@ function mostrarOlvidastePassword(e) {
 
 function abrirModalEditProfile() {
     if (!currentUserId) return showToast("Debes iniciar sesión para editar tu perfil.", "error");
-    document.getElementById('editFullName').value = userFullData.full_name || '';
+    document.getElementById('editFullName').value = userFullData.full_name || userFullData.nombre || '';
     document.getElementById('editUsername').value = username || '';
     document.getElementById('editEmail').value = userEmail || '';
     document.getElementById('editWalletAddress').value = userAddress || '';
@@ -278,6 +354,31 @@ if (regEmailInput) {
     });
 }
 
+// Botones de conectar Wallet en Modales
+const btnConnectWalletModal = document.getElementById('btnConnectWalletModal');
+if (btnConnectWalletModal) {
+    btnConnectWalletModal.addEventListener('click', async (e) => {
+        if (e && e.preventDefault) e.preventDefault();
+        const addr = await solicitarConectarWallet();
+        if (addr) {
+            document.getElementById('txtWalletAuth').value = addr;
+            showToast("Billetera conectada: " + addr.substring(0,6) + "..." + addr.slice(-4), "success");
+        }
+    });
+}
+
+const btnUpdateWalletAddress = document.getElementById('btnUpdateWalletAddress');
+if (btnUpdateWalletAddress) {
+    btnUpdateWalletAddress.addEventListener('click', async (e) => {
+        if (e && e.preventDefault) e.preventDefault();
+        const addr = await solicitarConectarWallet();
+        if (addr) {
+            document.getElementById('editWalletAddress').value = addr;
+            showToast("Billetera seleccionada: " + addr.substring(0,6) + "..." + addr.slice(-4), "success");
+        }
+    });
+}
+
 // Registro Form
 const registroForm = document.getElementById('registroForm');
 if (registroForm) {
@@ -307,11 +408,13 @@ if (registroForm) {
                 .from('users')
                 .insert([{
                     email: email,
+                    password: password,
                     password_hash: password,
                     username: autoUser || email.split('@')[0],
                     wallet_address: wallet ? wallet.toLowerCase() : '',
                     role: 'Votante',
                     full_name: `${nombre} ${apellidos}`,
+                    nombre: `${nombre} ${apellidos}`,
                     birth_date: fechaNac,
                     age: parseInt(edad) || 0,
                     avatar_url: avatar
@@ -321,19 +424,12 @@ if (registroForm) {
 
             if (error) throw error;
 
-            userFullData = data;
-            currentUserId = data.id;
-            userEmail = data.email;
-            username = data.username;
-            userAddress = data.wallet_address || '';
-            userRol = data.role || 'Votante';
-
             cerrarModalAuth();
-            mostrarInterfazConectada();
+            guardarSesionEnLocalStorage(data);
             showToast("Registro completado exitosamente.", "success");
         } catch (err) {
             console.error(err);
-            showToast("Error al registrar la cuenta.", "error");
+            showToast("Error al registrar la cuenta: " + err.message, "error");
         }
     });
 }
@@ -348,9 +444,10 @@ if (loginForm) {
         const password = document.getElementById('loginPassword').value.trim();
 
         if (emailOrUser === 'admin' && password === '1234') {
-            userFullData = {
-                id: 'seeded-admin-001',
+            const seededAdmin = {
+                id: '00000000-0000-0000-0000-000000000001',
                 full_name: 'Administrador del Sistema',
+                nombre: 'Administrador MonadHub',
                 username: 'admin',
                 email: 'admin@monadhub.xyz',
                 role: 'Administrador',
@@ -359,14 +456,8 @@ if (loginForm) {
                 wallet_address: '0x5381c67C020ca604cb9e60E07f636E43D20489bE'
             };
 
-            currentUserId = userFullData.id;
-            userEmail = userFullData.email;
-            username = userFullData.username;
-            userRol = 'Administrador';
-            userAddress = userFullData.wallet_address;
-
             cerrarModalAuth();
-            mostrarInterfazConectada();
+            guardarSesionEnLocalStorage(seededAdmin);
             showToast("Sesión iniciada como Administrador.", "success");
             return;
         }
@@ -376,26 +467,65 @@ if (loginForm) {
                 .from('users')
                 .select('*')
                 .or(`email.eq.${emailOrUser},username.eq.${emailOrUser}`)
-                .eq('password_hash', password)
-                .single();
+                .or(`password.eq.${password},password_hash.eq.${password}`)
+                .maybeSingle();
 
             if (error || !data) {
                 return showToast("Credenciales de acceso incorrectas.", "error");
             }
 
-            userFullData = data;
-            currentUserId = data.id;
-            userEmail = data.email;
-            username = data.username;
-            userRol = data.role || 'Votante';
-            userAddress = data.wallet_address || '';
-
             cerrarModalAuth();
-            mostrarInterfazConectada();
+            guardarSesionEnLocalStorage(data);
             showToast("Sesión iniciada correctamente.", "success");
         } catch (err) {
             console.error(err);
             showToast("Error al procesar el inicio de sesión.", "error");
+        }
+    });
+}
+
+// Formulario de Edición de Perfil
+const formEditProfile = document.getElementById('formEditProfile');
+if (formEditProfile) {
+    formEditProfile.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!currentUserId) return;
+
+        const editFullName = document.getElementById('editFullName').value.trim();
+        const editUsername = document.getElementById('editUsername').value.trim();
+        const editEmail = document.getElementById('editEmail').value.trim();
+        const editNewPassword = document.getElementById('editNewPassword').value.trim();
+        const editWalletAddress = document.getElementById('editWalletAddress').value.trim().toLowerCase();
+
+        const updateData = {
+            full_name: editFullName,
+            nombre: editFullName,
+            username: editUsername,
+            email: editEmail,
+            wallet_address: editWalletAddress || null
+        };
+
+        if (editNewPassword) {
+            updateData.password = editNewPassword;
+            updateData.password_hash = editNewPassword;
+        }
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('users')
+                .update(updateData)
+                .eq('id', currentUserId)
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            cerrarModalEditProfile();
+            guardarSesionEnLocalStorage(data);
+            showToast("Perfil actualizado correctamente.", "success");
+        } catch (err) {
+            console.error(err);
+            showToast("Error al actualizar perfil: " + err.message, "error");
         }
     });
 }
@@ -405,10 +535,10 @@ function mostrarInterfazConectada() {
     document.getElementById('userInfo').classList.remove('hidden');
     document.getElementById('navTabPerfil').classList.remove('hidden');
 
-    document.getElementById('lblUserEmail').innerText = userEmail;
+    document.getElementById('lblUserEmail').innerText = userEmail || username;
     document.getElementById('lblWalletChip').innerText = userAddress ? `${userAddress.substring(0,6)}...${userAddress.substring(userAddress.length - 4)}` : 'Sin Wallet';
 
-    if (userRol === 'Administrador') {
+    if (userRol === 'Administrador' || userRol === 'admin') {
         document.getElementById('lblUserRole').classList.remove('hidden');
         document.getElementById('lblUserRole').innerText = 'Administrador';
         document.getElementById('adminPanelSection').classList.remove('hidden');
@@ -418,8 +548,8 @@ function mostrarInterfazConectada() {
     }
 
     document.getElementById('profUsernameDisplay').innerText = username;
-    document.getElementById('profNombreComp').innerText = userFullData.full_name || username;
-    document.getElementById('profEmail').innerText = userEmail;
+    document.getElementById('profNombreComp').innerText = userFullData.full_name || userFullData.nombre || username;
+    document.getElementById('profEmail').innerText = userEmail || 'No registrado';
     document.getElementById('profFechaNac').innerText = userFullData.birth_date || 'No registrada';
     document.getElementById('profEdad').innerText = userFullData.age || 'N/A';
     document.getElementById('profWallet').innerText = userAddress || 'No conectada';
@@ -435,6 +565,8 @@ function cerrarSesion() {
     userAddress = "";
     userRol = "Votante";
     userFullData = {};
+
+    localStorage.removeItem('monadhub_session');
 
     document.getElementById('userInfo').classList.add('hidden');
     document.getElementById('btnAuthHeader').classList.remove('hidden');
@@ -492,7 +624,7 @@ if (numTotalOpciones) {
     numTotalOpciones.addEventListener('change', (e) => renderDynamicOptions(e.target.value));
 }
 
-// Publicación de Nueva Votación (Sin Whitelist)
+// Publicación de Nueva Votación
 const btnCrear = document.getElementById('btnCrear');
 if (btnCrear) {
     btnCrear.addEventListener('click', async () => {
@@ -510,6 +642,26 @@ if (btnCrear) {
             return showToast("Completa el título, al menos 2 opciones y la fecha de cierre.", "error");
         }
 
+        let onChainId = Date.now();
+        let txHash = null;
+
+        // Intentar ejecución On-Chain si hay wallet
+        if (typeof window.ethereum !== 'undefined') {
+            const addr = await solicitarConectarWallet();
+            if (addr && contract) {
+                try {
+                    showToast("Firmando creación de votación en Monad Testnet...", "info");
+                    const durationMin = Math.max(1, Math.floor((new Date(fechaFin).getTime() - Date.now()) / 60000));
+                    const tx = await contract.crearVotacion(titulo, opciones, durationMin);
+                    const receipt = await tx.wait();
+                    txHash = receipt.transactionHash;
+                    showToast("¡Votación confirmada en la Blockchain!", "success");
+                } catch (err) {
+                    console.warn("Fallo Web3 al crear votación:", err);
+                }
+            }
+        }
+
         try {
             showToast("Publicando votación en Supabase...", "info");
             const { data: poll, error } = await supabaseClient
@@ -518,14 +670,22 @@ if (btnCrear) {
                     creator_id: currentUserId,
                     title: titulo,
                     slug: slug,
-                    ends_at: new Date(fechaFin).toISOString()
+                    ends_at: new Date(fechaFin).toISOString(),
+                    on_chain_id: onChainId,
+                    tx_hash: txHash
                 }])
                 .select()
                 .single();
 
             if (error) throw error;
 
-            const opcionesData = opciones.map(op => ({ poll_id: poll.id, option_text: op, votes_count: 0 }));
+            const opcionesData = opciones.map((op, idx) => ({
+                poll_id: poll.id,
+                option_text: op,
+                option_index: idx,
+                votes_count: 0
+            }));
+
             await supabaseClient.from('poll_options').insert(opcionesData);
 
             showToast("Votación publicada con éxito.", "success");
@@ -539,7 +699,7 @@ if (btnCrear) {
             cargarVotacionPorSlugOId(poll.slug);
         } catch (err) {
             console.error(err);
-            showToast("Error al publicar la votación.", "error");
+            showToast("Error al publicar la votación: " + err.message, "error");
         }
     });
 }
@@ -583,7 +743,7 @@ async function cargarVotacionPorSlugOId(slugOrId) {
 function renderizarDetalleVotacion(poll) {
     document.getElementById('divDetalle').innerHTML = `
         <h2 style="font-size:1.6rem; margin-bottom:0.4rem;">${poll.title}</h2>
-        <p style="color:var(--text-sec); font-size:0.85rem;">Slug: <code>/votacion/${poll.slug}</code> | ID: ${poll.id}</p>
+        <p style="color:var(--text-sec); font-size:0.85rem;">Slug: <code>/votacion/${poll.slug}</code> | ID: ${poll.id} | On-Chain ID: ${poll.on_chain_id || 'Off-chain'}</p>
     `;
 
     // Iniciar Temporizador
@@ -592,22 +752,24 @@ function renderizarDetalleVotacion(poll) {
     // Renderizar Opciones y Conteo de Votos
     const totalVotos = poll.poll_options ? poll.poll_options.reduce((sum, op) => sum + (op.votes_count || 0), 0) : 0;
     
-    document.getElementById('divOpciones').innerHTML = poll.poll_options.map((op, idx) => {
-        const votos = op.votes_count || 0;
-        const pct = totalVotos > 0 ? ((votos / totalVotos) * 100).toFixed(1) : 0;
-        return `
-            <div class="opcion-card" style="background:rgba(15,23,42,0.6); padding:1rem; border-radius:8px; border:1px solid var(--border);">
-                <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
-                    <strong>Opción ${idx + 1}: ${op.option_text}</strong>
-                    <span>${votos} votos (${pct}%)</span>
+    document.getElementById('divOpciones').innerHTML = poll.poll_options
+        .sort((a,b) => (a.option_index || 0) - (b.option_index || 0))
+        .map((op, idx) => {
+            const votos = op.votes_count || 0;
+            const pct = totalVotos > 0 ? ((votos / totalVotos) * 100).toFixed(1) : 0;
+            return `
+                <div class="opcion-card" style="background:rgba(15,23,42,0.6); padding:1rem; border-radius:8px; border:1px solid var(--border); margin-bottom:0.8rem;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+                        <strong>Opción ${idx + 1}: ${op.option_text}</strong>
+                        <span>${votos} votos (${pct}%)</span>
+                    </div>
+                    <div class="progress-bar-bg" style="margin-bottom:0.8rem;">
+                        <div class="progress-bar-fill" style="width:${pct}%"></div>
+                    </div>
+                    <button type="button" class="btn-secondary" style="width:100%;" onclick="votarOpcion('${op.id}', ${op.option_index || idx})">Votar por esta Opción</button>
                 </div>
-                <div class="progress-bar-bg" style="margin-bottom:0.8rem;">
-                    <div class="progress-bar-fill" style="width:${pct}%"></div>
-                </div>
-                <button type="button" class="btn-secondary" style="width:100%;" onclick="votarOpcion('${op.id}')">Votar por esta Opción</button>
-            </div>
-        `;
-    }).join('');
+            `;
+        }).join('');
 
     // Módulo Compartir y QR
     const linkFull = `${window.location.origin}${window.location.pathname}#/votacion/${poll.slug}`;
@@ -621,17 +783,52 @@ function renderizarDetalleVotacion(poll) {
     }
 }
 
-async function votarOpcion(optionId) {
+async function votarOpcion(optionId, optionIndex) {
     if (!currentUserId) return showToast("Debes iniciar sesión para emitir tu voto.", "error");
 
+    let txHash = null;
+
+    if (typeof window.ethereum !== 'undefined') {
+        const addr = await solicitarConectarWallet();
+        if (addr && contract && currentPollData) {
+            try {
+                showToast("Enviando voto a la blockchain...", "info");
+                const pollOnChainId = currentPollData.on_chain_id || 1;
+                const tx = await contract.votar(pollOnChainId, optionIndex);
+                const receipt = await tx.wait();
+                txHash = receipt.transactionHash;
+                showToast("¡Voto registrado on-chain en Monad Testnet!", "success");
+            } catch (err) {
+                console.warn("Fallo voto Web3:", err);
+            }
+        }
+    }
+
     try {
-        showToast("Registrando tu voto...", "info");
+        // Registrar el voto en la tabla votes
+        const { error: voteErr } = await supabaseClient
+            .from('votes')
+            .insert([{
+                poll_id: currentPollData.id,
+                option_id: optionId,
+                user_id: currentUserId,
+                voter_id: currentUserId,
+                wallet_address: userAddress || null,
+                voter_wallet: userAddress || null,
+                tx_hash: txHash
+            }]);
+
+        if (voteErr) {
+            return showToast("Ya has emitido tu voto en esta encuesta.", "error");
+        }
+
+        // Incrementar conteo
         const { data: optionData } = await supabaseClient.from('poll_options').select('votes_count').eq('id', optionId).single();
         const newCount = (optionData ? optionData.votes_count : 0) + 1;
 
         await supabaseClient.from('poll_options').update({ votes_count: newCount }).eq('id', optionId);
 
-        showToast("¡Voto registrado con éxito!", "success");
+        showToast("¡Voto contabilizado con éxito!", "success");
         if (currentPollData) cargarVotacionPorSlugOId(currentPollData.slug);
     } catch (err) {
         console.error(err);
@@ -695,6 +892,26 @@ async function guardarVaca(event) {
     const meta = parseFloat(document.getElementById('numVacaMeta').value);
     const fechaFin = document.getElementById('txtVacaFechaFin').value;
 
+    let onChainId = Date.now();
+    let txHash = null;
+
+    if (typeof window.ethereum !== 'undefined') {
+        const addr = await solicitarConectarWallet();
+        if (addr && contract) {
+            try {
+                showToast("Lanzando colecta en Monad Testnet...", "info");
+                const targetWei = ethers.utils.parseEther(meta.toString());
+                const durationMin = Math.max(1, Math.floor((new Date(fechaFin).getTime() - Date.now()) / 60000));
+                const tx = await contract.crearVaca(titulo, targetWei, durationMin);
+                const receipt = await tx.wait();
+                txHash = receipt.transactionHash;
+                showToast("Colecta confirmada on-chain!", "success");
+            } catch (err) {
+                console.warn("Error Web3 Vaca:", err);
+            }
+        }
+    }
+
     try {
         showToast("Publicando colecta en Supabase...", "info");
         const { error } = await supabaseClient
@@ -704,9 +921,12 @@ async function guardarVaca(event) {
                 title: titulo,
                 description: descripcion,
                 target_amount: meta,
+                current_amount: 0,
                 collected_amount: 0,
                 ends_at: new Date(fechaFin).toISOString(),
-                creator_wallet: userAddress ? userAddress.toLowerCase() : ''
+                creator_wallet: userAddress ? userAddress.toLowerCase() : '',
+                on_chain_id: onChainId,
+                tx_hash: txHash
             }]);
 
         if (error) throw error;
@@ -717,7 +937,7 @@ async function guardarVaca(event) {
         cargarMetricasGlobales();
     } catch (err) {
         console.error(err);
-        showToast("Error al publicar la colecta.", "error");
+        showToast("Error al publicar la colecta: " + err.message, "error");
     }
 }
 
@@ -740,7 +960,7 @@ async function cargarCampanasVaca() {
 
         container.innerHTML = vacas.map(vaca => {
             const estaVencida = Date.now() >= new Date(vaca.ends_at).getTime();
-            const recolectado = parseFloat(vaca.collected_amount || 0);
+            const recolectado = parseFloat(vaca.collected_amount || vaca.current_amount || 0);
             const meta = parseFloat(vaca.target_amount || 1);
             const porcentaje = Math.min(100, ((recolectado / meta) * 100)).toFixed(1);
 
@@ -767,7 +987,7 @@ async function cargarCampanasVaca() {
                     ${!estaVencida ? `
                         <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
                             <input type="number" id="inputAporte_${vaca.id}" class="form-control" placeholder="Monto MON (Ej: 0.1)" step="0.001" min="0.001" style="max-width: 200px;">
-                            <button type="button" class="btn-primary" style="padding: 0.5rem 1rem;" onclick="aportarAVaca('${vaca.id}',${recolectado})">Aportar MON</button>
+                            <button type="button" class="btn-primary" style="padding: 0.5rem 1rem;" onclick="aportarAVaca('${vaca.id}', ${recolectado},${vaca.on_chain_id || 1})">Aportar MON</button>
                         </div>
                     ` : ''}
                 </div>
@@ -781,14 +1001,32 @@ async function cargarCampanasVaca() {
 
 window.cargarCampanasVaca = cargarCampanasVaca;
 
-async function aportarAVaca(id, actual) {
+async function aportarAVaca(id, actual, onChainId) {
     const inp = document.getElementById(`inputAporte_${id}`);
     const val = parseFloat(inp ? inp.value : 0);
     if (!val || val <= 0) return showToast("Ingresa un monto válido.", "error");
 
+    if (typeof window.ethereum !== 'undefined') {
+        const addr = await solicitarConectarWallet();
+        if (addr && contract) {
+            try {
+                showToast("Enviando aporte Web3 a Monad Testnet...", "info");
+                const tx = await contract.aportarAVaca(onChainId || 1, { value: ethers.utils.parseEther(val.toString()) });
+                await tx.wait();
+                showToast("¡Aporte Web3 confirmado en la Blockchain!", "success");
+            } catch (err) {
+                console.warn("Fallo aporte Web3:", err);
+            }
+        }
+    }
+
     try {
         const nuevoMonto = actual + val;
-        await supabaseClient.from('vacas').update({ collected_amount: nuevoMonto }).eq('id', id);
+        await supabaseClient.from('vacas').update({
+            collected_amount: nuevoMonto,
+            current_amount: nuevoMonto
+        }).eq('id', id);
+
         showToast("¡Aporte registrado correctamente!", "success");
         cargarCampanasVaca();
     } catch (err) {
@@ -808,6 +1046,23 @@ async function emitirCertificado(event) {
     const titulo = document.getElementById('txtCertTitulo').value.trim();
     const fecha = document.getElementById('txtCertFecha').value;
 
+    let txHash = null;
+
+    if (typeof window.ethereum !== 'undefined') {
+        const addr = await solicitarConectarWallet();
+        if (addr && contract) {
+            try {
+                showToast("Emitiendo certificado en la blockchain...", "info");
+                const tx = await contract.emitirCertificado(wallet, titulo);
+                const receipt = await tx.wait();
+                txHash = receipt.transactionHash;
+                showToast("¡Certificado emitido on-chain!", "success");
+            } catch (err) {
+                console.warn("Error emitiendo certificado Web3:", err);
+            }
+        }
+    }
+
     try {
         showToast("Registrando certificado en Supabase...", "info");
         const { error } = await supabaseClient
@@ -815,9 +1070,11 @@ async function emitirCertificado(event) {
             .insert([{
                 issuer_id: currentUserId,
                 recipient_name: nombre,
-                recipient_wallet: wallet,
+                recipient_address: wallet.toLowerCase(),
+                recipient_wallet: wallet.toLowerCase(),
                 title: titulo,
-                issued_at: fecha
+                issued_at: fecha || new Date().toISOString(),
+                tx_hash: txHash
             }]);
 
         if (error) throw error;
@@ -828,7 +1085,7 @@ async function emitirCertificado(event) {
         cargarMetricasGlobales();
     } catch (err) {
         console.error(err);
-        showToast("Error al emitir certificado.", "error");
+        showToast("Error al emitir certificado: " + err.message, "error");
     }
 }
 
@@ -855,9 +1112,9 @@ async function cargarCertificados() {
                     <h3>${cert.title}</h3>
                     <span class="card-badge">Verificado</span>
                 </div>
-                <p><strong>Otorgado a:</strong> ${cert.recipient_name}</p>
+                <p><strong>Otorgado a:</strong> ${cert.recipient_name || 'Destinatario'}</p>
                 <p style="font-size:0.8rem; color:var(--text-sec); margin-top:0.3rem;">
-                    Wallet: <code>${cert.recipient_wallet}</code> | ID: ${cert.id}
+                    Wallet: <code>${cert.recipient_wallet || cert.recipient_address}</code> | ID: ${cert.id}
                 </p>
             </div>
         `).join('');
@@ -878,7 +1135,7 @@ async function buscarCertificado() {
         const { data: certs } = await supabaseClient
             .from('certificados')
             .select('*')
-            .or(`recipient_name.ilike.%${term}%,recipient_wallet.ilike.%${term}%,id.eq.${isNaN(term)?0:term}`);
+            .or(`recipient_name.ilike.%${term}%,recipient_wallet.ilike.%${term}%,recipient_address.ilike.%${term}%`);
 
         if (!certs || certs.length === 0) {
             container.innerHTML = `<p class="empty-msg">No se encontraron certificados coincidentes.</p>`;
@@ -889,7 +1146,7 @@ async function buscarCertificado() {
             <div class="card" style="margin-bottom: 1rem; border-left: 4px solid var(--primary);">
                 <h3>${cert.title}</h3>
                 <p><strong>Otorgado a:</strong> ${cert.recipient_name}</p>
-                <p style="font-size:0.8rem; color:var(--text-sec);">Wallet: <code>${cert.recipient_wallet}</code></p>
+                <p style="font-size:0.8rem; color:var(--text-sec);">Wallet: <code>${cert.recipient_wallet || cert.recipient_address}</code></p>
             </div>
         `).join('');
     } catch (err) {
@@ -946,10 +1203,10 @@ async function cargarDatosAdminPanel() {
         tbody.innerHTML = users.map(u => `
             <tr>
                 <td>${u.username || 'Usuario'}</td>
-                <td>${u.email}</td>
+                <td>${u.email || u.username}</td>
                 <td><span class="role-badge">${u.role || 'Votante'}</span></td>
                 <td><code>${u.wallet_address ? u.wallet_address.substring(0,8) + '...' : 'N/A'}</code></td>
-                <td><button type="button" class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.75rem;" onclick="showToast('Usuario gestionado', 'info')">Editar</button></td>
+                <td><button type="button" class="btn-secondary" style="padding:0.2rem 0.5rem; font-size:0.75rem;" onclick="showToast('Usuario seleccionado', 'info')">Editar</button></td>
             </tr>
         `).join('');
     } catch (err) {
@@ -1022,6 +1279,8 @@ async function cargarVotacionesRecientesHome() {
 
 // Inicialización de la Aplicación
 document.addEventListener("DOMContentLoaded", () => {
+    inicializarWeb3();
+    restaurarSesionGuardada();
     renderDynamicOptions(2);
     cargarMetricasGlobales();
     cargarVotacionesRecientesHome();
